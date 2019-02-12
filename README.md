@@ -68,8 +68,12 @@ MScThesis/
 |  |  resnet.py
 |
 |__configs/ (creation of model choice)
-      base_pose_estimation.yaml
-      pose_estimation_adaptation.yaml
+|     base_pose_estimation.yaml
+|     pose_estimation_adaptation.yaml
+|
+|__notebooks/ (new)
+|
+|__plot/ (new, utils for plotting)
 ```
 log the log-files to the user input --> such that you don't overwrite log with files from other settings.
 

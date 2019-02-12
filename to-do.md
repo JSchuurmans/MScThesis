@@ -1,4 +1,9 @@
 # TO-DO
+## Errors and notes
+* (Bi)LSTM_BB
+	* flatten_parameters()
+	* trainer.train() should not be called separately for BB
+
 ## Admin and Doc
 * create env
 * create requirements.txt
@@ -65,3 +70,6 @@
 * initialization
 * transfer learning
 	* braun to banking (vice versa)
+
+# Done
+    * wd

@@ -1,3 +1,24 @@
+# from MScThesis-old git repo
+.idea/
+/datasets
+/data
+/code/Tom
+/plots
+/results
+
+# from active learning
+*.p
+*.pyc
+*.txt
+*.pkl
+
+datasets/
+results/
+
+# from active learning2
+/wordvectors
+/data
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
