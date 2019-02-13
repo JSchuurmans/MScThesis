@@ -48,7 +48,8 @@ class Experiment(object):
             n_res = K_FOLD * n_wdim * n_hdim
             results_cv = pd.DataFrame(columns=['word_dim','h_dim','i','F1_train','F1_valid'],
                                         index= range(0,n_res))
-
+            cv_data_path = os.path.join(self.parameters['dataset_path'], 'cv')
+            
             for w, worddim in enumerate(self.parameters['worddims']):
                 for i in range(K_FOLD):
                     
@@ -56,9 +57,7 @@ class Experiment(object):
                     # file names
                     train_fn = f"{self.parameters['dataset']}_train_{i}.pickle"
                     valid_fn = f"{self.parameters['dataset']}_valid_{i}.pickle"
-
-                    cv_data_path = os.path.join(self.parameters['dataset_path'], 'cv')
-                    
+        
                     res_path = self.parameters['cv_result_path']
 
                     self.base_model.load_data(dataset_path= cv_data_path,

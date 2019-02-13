@@ -51,7 +51,8 @@ if parameters['crossval']:
     parameters['worddims'] = WORD_PATHS.keys()
     parameters['hdims'] = [25,50,75,100,150,200,300]
     parameters['cv_result_path'] = os.path.join(opt.log_path, use_dataset,'cv', f"{model_name}",f"{parameters['time']}")
-
+    if not os.path.exists(parameters['cv_result_path']):
+        os.makedirs(parameters['cv_result_path'])
 
 parameters['dataset_path'] = os.path.join('datasets', use_dataset)
 parameters['checkpoint_path'] = os.path.join(opt.log_path, use_dataset, model_name, parameters['checkpoint'])
@@ -68,8 +69,7 @@ if not os.path.exists(parameters['result_path']):
 if not os.path.exists(parameters['checkpoint_path']):
     os.makedirs(parameters['checkpoint_path'])  
 
-if not os.path.exists(parameters['cv_result_path']):
-    os.makedirs(parameters['cv_result_path'])
+
 
 # if not os.path.exists(os.path.join(parameters['checkpoint_path'], 'modelweights')):
 #     os.makedirs(os.path.join(parameters['checkpoint_path'], 'modelweights'))
