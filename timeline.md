@@ -1,36 +1,30 @@
 # Timeline
 * Feb
-	* 10
+	* 10,12,13
+		* ~~LSTM~~
+		* ~~LSTM_BB~~
+
+	* 14
 		* scripting
 			* NB
 			* SVM
-			* ~~LSTM~~
-			* ~~LSTM_BB~~
-			* cv
-		* env
-        * requirements.txt
-		* uncertainties
-		* stat tests
-
-    * 13
+			* logs / aggr res
         * hSoftmax
         * hSVM
-        * NB bigrams
-	* 14
-		* transfer learning
-        * Tail, pooling, hybrid
 	* 15
-		* pruning Bayesian LSTM
-		* data augmentation (wordnet)
+		* uncertainties
+		* stat tests
 	* 16
-		* data loader (FT,w2v)
-        * retraining word embeddings
+
     * 17
         * writing
         * plots
 	* 18
         * **FINAL DRAFT**
-
+    * after
+    	* README
+    	* env
+    	* requirements.txt
 * Mar
 	* 18
         * **SEND TO CO-READER**
@@ -42,3 +36,14 @@
 * May
     **Defense**
     * ?16-21? Graduation date 
+
+* No Fit
+	* data loader (FT,w2v)
+	* pruning Bayesian LSTM
+    * NB bigrams
+
+* Def no time
+    * transfer learnings
+    * data augmentation (wordnet)
+	* retraining word embeddings
+	* Tail, pooling, hybrid

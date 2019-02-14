@@ -49,7 +49,7 @@ class BaseModel(object):
 
         print('Loading Dataset Complete')
 
-    def load_model(self, hdim):
+    def load_model(self, wdim, hdim):
         if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
             if self.parameters['reload']:
                 print ('Loading Saved Weights....................................................................')
@@ -58,13 +58,13 @@ class BaseModel(object):
             else:
                 print('Building Model............................................................................')
                 word_vocab_size = len(self.word_to_id)
-                word_embedding_dim = self.parameters['worddim']
+                # word_embedding_dim = self.parameters['worddim']
                 output_size = self.parameters['opsiz']
                 bidirectional = self.parameters['bidir']
                 # Build NN
                 if self.parameters['model'][-4:] == 'LSTM':
                     print (f"(Bi: {self.parameters['bidir']}) LSTM")
-                    self.model = BiLSTM(word_vocab_size, word_embedding_dim, 
+                    self.model = BiLSTM(word_vocab_size, wdim, 
                             hdim, output_size, 
                             pretrained = self.word_embeds,
                             bidirectional = bidirectional)
@@ -72,7 +72,7 @@ class BaseModel(object):
                 elif self.parameters['model'][-2:] == 'BB':
                     print (f"(Bi: {self.parameters['bidir']}) LSTM_BB")
                     sigma_prior = self.parameters['sigmp']
-                    self.model = BiLSTM_BB(word_vocab_size, word_embedding_dim, 
+                    self.model = BiLSTM_BB(word_vocab_size, wdim, 
                             hdim, output_size, 
                             pretrained = self.word_embeds,
                             bidirectional = bidirectional, 
@@ -98,7 +98,7 @@ class BaseModel(object):
                                     batch_size = self.parameters['batch_size'],
                                     checkpoint_path = self.parameters['checkpoint_path'])
             F1_train = self.all_F[-1][0]
-            F1_test = self.all_F[-1][0]
+            F1_test = self.all_F[-1][1]
             return self.losses, F1_train, F1_test
 
     def test(self):
@@ -107,4 +107,3 @@ class BaseModel(object):
     def plot_loss(self):
         plt.plot(self.losses)
         plt.savefig(os.path.join(self.parameters['result_path'], 'lossplot.png'))
-    
