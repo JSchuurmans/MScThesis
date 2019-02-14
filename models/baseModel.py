@@ -5,15 +5,29 @@
 import torch
 
 import os
+from time import time
+import json
+import pandas as pd
+import matplotlib.pyplot as plt
 
+# neural modules
 import models.neural_cls
 from models.neural_cls.util import Loader, Trainer
 from models.neural_cls.models import BiLSTM
 from models.neural_cls.models import BiLSTM_BB
-import matplotlib.pyplot as plt
 
-from time import time
-import json
+# naive bayes module
+from models.naive_bayes import nb
+
+# svm
+from datasets.utils import *
+from models.svm import * # svm_grid, experiment_train, experiment_intent
+from gensim.models import KeyedVectors
+from gensim.scripts.glove2word2vec import glove2word2vec
+
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
 
 class BaseModel(object):
     def __init__(self, parameters):
@@ -21,7 +35,21 @@ class BaseModel(object):
         # self.meta = {}
         # self.model = BaseModel(parameters)
 
-    def load_data(self, dataset_path, wordpath, worddim, 
+    def load_wordvectors(self):
+        # TODO create propper paths
+        # TODO create re-locate wordvector files to wordvector directory
+        if self.parameters['word_vector'] == 'ft':
+            self.word_vectors = KeyedVectors.load_word2vec_format('C:\Local_data\wiki.en\wiki.en.vec', binary=False)
+        elif self.parameters['word_vector'] == 'gv':
+            # if gensim format of GloVe does not exists
+            if not os.path.exists('C:\Local_data\glove.6B\gensim_glove.6B.300d.txt'):
+                # convert GloVe to gensim format
+                glove2word2vec(glove_input_file='C:\Local_data\glove.6B\glove.6B.300d.txt', word2vec_output_file='C:\Local_data\glove.6B\gensim_glove.6B.300d.txt')
+            self.word_vectors = KeyedVectors.load_word2vec_format('C:\Local_data\glove.6B\gensim_glove.6B.300d.txt', binary=False)
+        elif self.parameters['word_vector'] == 'wv':
+            self.word_vectors = KeyedVectors.load_word2vec_format('C:\Local_data\GoogleNews-vectors\GoogleNews-vectors-negative300.bin', binary=True)
+
+    def load_data(self, dataset_path, wordpath=None, worddim=None, 
                     train_fn='braun_train.pickle', test_fn='braun_test.pickle'):
         
         if self.parameters['model'] in ['LSTM','BiLSTM', 'LSTM_BB','BiLSTM_BB']:
@@ -32,7 +60,7 @@ class BaseModel(object):
                                                             dataset_path, 
                                                             wordpath, 
                                                             worddim)
-            elif self.parameters['dataset'] in ['braun','retail']:
+            elif self.parameters['dataset'] in ['braun','retail','travel','ubuntu','webapp2']:
                 self.train_data, self.test_data, mappings = loader.load_pickle(
                                                             dataset_path, 
                                                             wordpath, 
@@ -44,8 +72,26 @@ class BaseModel(object):
             self.tag_to_id = mappings['tag_to_id']
             self.word_embeds = mappings['word_embeds']
         
-        else:
-            raise NotImplementedError()
+        elif self.parameters['model'] in ['NB','SVM']:
+            train_path = os.path.join(dataset_path, train_fn)
+            test_path = os.path.join(dataset_path, test_fn)
+
+            df_train = pd.read_pickle(train_path)
+            df_test = pd.read_pickle(test_path)
+
+            self.X_train = df_train['utterance'] # TODO make dynamic/note in README
+            self.y_train = df_train['intent']
+
+            self.X_test = df_test['utterance'] 
+            self.y_test = df_test['intent']
+
+            # data loading for SVM
+            if self.parameters['model'] =='SVM':
+                texts_train = remove_stopwords(remove_non_alpha_num(self.X_train))
+                texts_test = remove_stopwords(remove_non_alpha_num(self.X_test))
+
+                self.train_sum, self.train_ave = create_input(texts_train, self.word_vectors)
+                self.test_sum, self.test_ave = create_input(texts_test, self.word_vectors)
 
         print('Loading Dataset Complete')
 
@@ -78,6 +124,12 @@ class BaseModel(object):
                             bidirectional = bidirectional, 
                             sigma_prior=sigma_prior)
             self.model.cuda()
+        
+        elif self.parameters['model'] == 'NB':
+            self.model = nb
+        
+        elif self.parameters['model'] == 'SVM':
+            self.model = svm_grid
 
     def train(self):
         if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
@@ -97,9 +149,44 @@ class BaseModel(object):
             self.losses,_,_,_, self.all_F = trainer.train_model(num_epochs, self.train_data, self.test_data, learning_rate,
                                     batch_size = self.parameters['batch_size'],
                                     checkpoint_path = self.parameters['checkpoint_path'])
+            # TODO self.losses write losses away to log file
             F1_train = self.all_F[-1][0]
             F1_test = self.all_F[-1][1]
-            return self.losses, F1_train, F1_test
+
+            # return F1_train, F1_test
+
+        elif self.parameters['model'] == 'NB':
+            self.fitted_model = self.model.fit(self.X_train, self.y_train)
+            
+            y_hat = self.fitted_model.predict(self.X_test)
+            prec_macro = precision_score(self.y_test, y_hat, average='macro')
+            rec_macro = recall_score(self.y_test, y_hat, average='macro')
+            F1_test = f1_score(self.y_test, y_hat, average='macro')
+
+            print('recall macro test: ' + str(rec_macro))
+            print('precision macro test: ' + str(prec_macro))
+            print('F1 macro test: ' + str(F1_test))
+
+            y_hat_train = self.fitted_model.predict(self.X_train) 
+            prec_macro_train = precision_score(self.y_train, y_hat_train, average='macro')
+            rec_macro_train = recall_score(self.y_train, y_hat_train, average='macro')
+            F1_train = f1_score(self.y_train, y_hat_train, average='macro')
+
+            print('recall macro train: ' + str(rec_macro_train))
+            print('precision macro train: ' + str(prec_macro_train))
+            print('F1 macro train: ' + str(F1_train))
+
+        elif self.parameters['model'] == 'SVM':
+            CBOW = 'sum'
+            if CBOW == 'sum':
+                _,_, F1, _, _ = self.model(self.train_sum, self.y_train, self.test_sum, self.y_test)
+            elif CBOW == 'ave':
+                _,_, F1, _, _ = self.model(self.train_ave, self.y_train, self.test_ave, self.y_test)
+            
+            F1_train = F1[1]
+            F1_test = F1[0]
+        
+        return F1_train, F1_test
 
     def test(self):
         raise NotImplementedError

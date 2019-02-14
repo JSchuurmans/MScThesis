@@ -30,15 +30,16 @@ class Experiment(object):
         # self.model = BaseModel(parameters)
 
     def run(self):
-        # self.parameters = parameters
+        if self.parameters['model'] == 'SVM':
+            self.base_model.load_wordvectors()
         self.base_model.load_data(dataset_path= self.parameters['dataset_path'],
                                     wordpath= self.parameters['wordpath'],
                                     worddim = self.parameters['worddim'],
-                                    train_fn= f"{self.parameters['dataset']}_train.pickle",
-                                    test_fn= f"{self.parameters['dataset']}_test.pickle")
+                                    train_fn= "train.pickle",
+                                    test_fn= "test.pickle")
         self.base_model.load_model(wdim = self.parameters['worddim'],
                                     hdim=self.parameters['hdim'])
-        self.losses, self.F1_train, self.F1_test = self.base_model.train()
+        self.F1_train, self.F1_test = self.base_model.train()
 
     def cv(self):
         if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
@@ -62,7 +63,7 @@ class Experiment(object):
                     valid_fn = f"valid_{i}.pickle"
         
                     res_path = self.parameters['cv_result_path']
-
+                    
                     self.base_model.load_data(dataset_path= cv_data_path,
                                                 wordpath= wordpath,
                                                 worddim= worddim,
@@ -72,7 +73,7 @@ class Experiment(object):
                     for h, hdim in enumerate(self.parameters['hdims']):
                         self.base_model.load_model(worddim, hdim)
 
-                        losses, F1_train, F1_valid = self.base_model.train()
+                        F1_train, F1_valid = self.base_model.train()
 
                         # print(count)
                         
@@ -127,6 +128,8 @@ class Experiment(object):
                 #   check data_path
                 
                 # This is the same as run
+                if self.parameters['model'] == 'SVM':
+                    self.base_model.load_wordvectors()
                 self.base_model.load_data(dataset_path= intent_path,
                                     wordpath= self.parameters['wordpath'],
                                     worddim = self.parameters['worddim'],
@@ -134,7 +137,7 @@ class Experiment(object):
                                     test_fn= test_fn)
                 self.base_model.load_model(wdim = self.parameters['worddim'],
                                     hdim=self.parameters['hdim'])
-                self.losses, self.F1_train, self.F1_test = self.base_model.train()
+                self.F1_train, self.F1_test = self.base_model.train()
                 # End same as run
 
                 results_intent = results_intent.append(dict(n_intent=n_int, i=i,
@@ -153,11 +156,13 @@ class Experiment(object):
         results_obs = pd.DataFrame(columns=['n_obs','i','F1_train','F1_test'])
         intent_path = os.path.join(self.parameters['dataset_path'], 'vary_obs')
         for n_obs in N_OBS_LIST:
-            for i in self.parameters['obs_runs']:
+            for i in range(self.parameters['obs_runs']):
                 train_fn = f'train_{n_obs}_{i}.pickle'
                 test_fn = f'test.pickle'
 
                 # This is the same as run
+                if self.parameters['model'] == 'SVM':
+                    self.base_model.load_wordvectors()
                 self.base_model.load_data(dataset_path= intent_path,
                                     wordpath= self.parameters['wordpath'],
                                     worddim = self.parameters['worddim'],
@@ -165,7 +170,7 @@ class Experiment(object):
                                     test_fn= test_fn)
                 self.base_model.load_model(wdim = self.parameters['worddim'],
                                     hdim=self.parameters['hdim'])
-                self.losses, self.F1_train, self.F1_test = self.base_model.train()
+                self.F1_train, self.F1_test = self.base_model.train()
                 # End same as run
 
                 results_obs = results_obs.append(dict(n_obs=n_obs, i=i,

@@ -23,20 +23,25 @@ parser.add_argument('--model', action='store', dest='model', default='BiLSTM', t
                     help='Model to Use')
 parser.add_argument('--worddim', default=300, type=int, dest='worddim',
                     help="Word Embedding Dimension")
+parser.add_argument('--hdim', default=150, type=int, dest='hdim',
+                    help="Hidden Dimension")
 parser.add_argument('--wordpath', default="wordvectors/glove.6B.300d.txt", dest='wordpath',
                     type=str, help="Location of pretrained embeddings")
 parser.add_argument('--reload', default=0, type=int, dest='reload',
                     help="Reload the last saved model")
 parser.add_argument('--checkpoint', default="checkpoint", type=str, dest='checkpoint',
                     help="Location of trained Model")
-parser.add_argument('--full', action='store',  dest='full', default=0, 
+parser.add_argument('--full', action='store',  dest='full', default=1, 
                     type=int, help="Location of trained Model")
 parser.add_argument('--crossval', action='store',  dest='crossval', default=0, 
-                    type=int, help="Location of trained Model")
+                    type=int, help="Cross validate LSTM")
 parser.add_argument('--intent', action='store',  dest='intent', default=0, 
-                    type=int, help="Location of trained Model")
+                    type=int, help="Vary number of intents")
 parser.add_argument('--vary_obs', action='store',  dest='vary_obs', default=0, 
-                    type=int, help="Location of trained Model")
+                    type=int, help="Vary number of training observations")
+parser.add_argument('--word_vector', action='store',  dest='word_vector', default='ft', 
+                    type=str, help="Type of wordvectors")
+
 
 opt = parser.parse_args()
 
@@ -97,8 +102,6 @@ if not os.path.exists(parameters['result_path']):
 
 if not os.path.exists(parameters['checkpoint_path']):
     os.makedirs(parameters['checkpoint_path'])  
-
-
 
 # if not os.path.exists(os.path.join(parameters['checkpoint_path'], 'modelweights')):
 #     os.makedirs(os.path.join(parameters['checkpoint_path'], 'modelweights'))
@@ -317,7 +320,6 @@ elif opt.model == 'BiLSTM_BB':
         parameters['batch_size'] = 10
         parameters['opsiz'] = 7 # TODO
 
-
 elif opt.model == 'NB' and opt.dataset == 'braun':
     print(f'Model: {opt.model}, Dataset: {opt.dataset}')
 
@@ -329,7 +331,6 @@ elif opt.model == 'SVM' and opt.dataset == 'braun':
 
 elif opt.model == 'SVM' and opt.dataset == 'retail':
     print(f'Model: {opt.model}, Dataset: {opt.dataset}')
-    # parameters['sigmp'] = float(np.exp(-3))
 else:
     raise NotImplementedError()
 
@@ -347,6 +348,7 @@ if parameters['crossval']:
 #   so they get saved in meta
 #   and worddim and hdim get overwritten with best
 if parameters['full']:
+    print('beginning full experiment')
     full_data = Experiment(parameters)
     full_data.run()
     full_data.create_meta()
@@ -356,8 +358,12 @@ if parameters['intent']:
     intent.intent()
 
 if parameters['vary_obs']:
-    intent = Experiment(parameters)
-    intent.intent()
+    if parameters['dataset'] == 'retail':
+        vary_obs = Experiment(parameters)
+        vary_obs.vary_obs()
+    else:
+        raise NotImplementedError
+    
 
 # if opt.model == 'BiLSTM':
 #     experiment.plot_loss()
