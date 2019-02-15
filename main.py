@@ -41,6 +41,8 @@ parser.add_argument('--vary_obs', action='store',  dest='vary_obs', default=0,
                     type=int, help="Vary number of training observations")
 parser.add_argument('--word_vector', action='store',  dest='word_vector', default='ft', 
                     type=str, help="Type of wordvectors")
+parser.add_argument('--cbow', action='store',  dest='cbow', default='sum', 
+                    type=str, help="Type of wordvectors")
 
 
 opt = parser.parse_args()
@@ -48,7 +50,13 @@ opt = parser.parse_args()
 parameters = vars(opt)
 
 use_dataset = parameters['dataset']
-model_name = parameters['model']
+# model_name = parameters['model']
+if parameters['model'] == 'SVM':
+    model_name = f"{parameters['model']}_{parameters['word_vector']}_{parameters['cbow']}"
+else:
+    model_name = parameters['model']
+parameters['model_name'] = model_name
+
 parameters['time'] = time()
 
 WORD_PATHS = {50:"wordvectors/glove.6B.50d.txt",
@@ -65,8 +73,8 @@ if parameters['crossval']:
     elif parameters['dataset'] == 'retail':
         parameters['kfold'] = 5
     parameters['wordpaths'] = WORD_PATHS
-    parameters['worddims'] = [50,100]   # TODO WORD_PATHS.keys()
-    parameters['hdims'] = [25,50]       # TODO ,75,100,150,200,300]
+    parameters['worddims'] = WORD_PATHS.keys()
+    parameters['hdims'] = [25,50,75,100,150,200,300]
     parameters['cv_result_path'] = os.path.join(opt.log_path, use_dataset,'cv', model_name, str(parameters['time']))
     if not os.path.exists(parameters['cv_result_path']):
         os.makedirs(parameters['cv_result_path'])
@@ -89,22 +97,19 @@ if parameters['vary_obs']:
 
 
 parameters['dataset_path'] = os.path.join('datasets', use_dataset)
-parameters['checkpoint_path'] = os.path.join(opt.log_path, use_dataset, model_name, parameters['checkpoint'])
-parameters['result_path'] = os.path.join(opt.log_path, use_dataset, f"{model_name}_{parameters['time']}")
 
-# loader = Loader()
 
 print('Model:', model_name)
 print('Dataset:', use_dataset)
 
+parameters['result_path'] = os.path.join(opt.log_path, use_dataset, model_name, str(parameters['time']))
 if not os.path.exists(parameters['result_path']):
     os.makedirs(parameters['result_path'])
 
+parameters['checkpoint_path'] = os.path.join(opt.log_path, use_dataset, model_name, parameters['checkpoint'])
 if not os.path.exists(parameters['checkpoint_path']):
     os.makedirs(parameters['checkpoint_path'])  
 
-# if not os.path.exists(os.path.join(parameters['checkpoint_path'], 'modelweights')):
-#     os.makedirs(os.path.join(parameters['checkpoint_path'], 'modelweights'))
 
 # model specific parameters
 if opt.model == 'LSTM':
@@ -337,6 +342,7 @@ else:
 
 if parameters['crossval']:
     cross_val = Experiment(parameters)
+    cross_val.save_param(parameters['cv_result_path'])
     # parameters = 
     best_w, best_h = cross_val.cv()
     parameters['worddim'] = best_w
@@ -351,19 +357,22 @@ if parameters['full']:
     print('beginning full experiment')
     full_data = Experiment(parameters)
     full_data.run()
+    full_data.save_param()
     full_data.create_meta()
 
 if parameters['intent']:
     intent = Experiment(parameters)
     intent.intent()
+    intent.save_param(parameters['int_result_path'])
 
 if parameters['vary_obs']:
     if parameters['dataset'] == 'retail':
         vary_obs = Experiment(parameters)
         vary_obs.vary_obs()
+        vary_obs.save_param(parameters['obs_result_path'])
     else:
         raise NotImplementedError
     
-
+print(f"Done, experiment took: {round(time()-parameters['time'], 2)} seconds")
 # if opt.model == 'BiLSTM':
 #     experiment.plot_loss()

@@ -24,7 +24,7 @@ from models.baseModel import BaseModel
 class Experiment(object):
     def __init__(self, parameters):
         self.parameters = parameters
-        self.meta = parameters
+        self.meta = {}
         self.base_model = BaseModel(parameters)
         # self.meta = {}
         # self.model = BaseModel(parameters)
@@ -37,9 +37,24 @@ class Experiment(object):
                                     worddim = self.parameters['worddim'],
                                     train_fn= "train.pickle",
                                     test_fn= "test.pickle")
-        self.base_model.load_model(wdim = self.parameters['worddim'],
-                                    hdim=self.parameters['hdim'])
-        self.F1_train, self.F1_test = self.base_model.train()
+        self.base_model.load_model(wdim= self.parameters['worddim'],
+                                    hdim= self.parameters['hdim'])
+        meta_data, train_results, test_results = self.base_model.train()
+
+        # F1_train = train_results['F1']
+        # F1_test = test_results['F1']
+
+        df_res = pd.DataFrame({'model':[self.parameters['model_name']],
+                                'F1_train':[train_results['F1']],
+                                'F1_test':[test_results['F1']],
+                                'P_train':[train_results['P']],
+                                'P_test':[test_results['P']],
+                                'R_train':[train_results['R']],
+                                'R_test':[test_results['R']]})
+
+        df_res.to_pickle(os.path.join(self.parameters['result_path'],f"results.pickle"))
+        
+        self.meta = self.meta.update(meta_data)
 
     def cv(self):
         if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
@@ -73,7 +88,10 @@ class Experiment(object):
                     for h, hdim in enumerate(self.parameters['hdims']):
                         self.base_model.load_model(worddim, hdim)
 
-                        F1_train, F1_valid = self.base_model.train()
+                        _, train_results, valid_results = self.base_model.train()
+
+                        F1_train = train_results['F1']
+                        F1_valid = valid_results['F1']
 
                         # print(count)
                         
@@ -96,6 +114,7 @@ class Experiment(object):
             df_res = results_cv.groupby(by=['word_dim','h_dim'])['F1_train','F1_valid'].mean()
             # print(df_res)
             df_res.to_csv(os.path.join(self.parameters['cv_result_path'],'df_res_cv.csv'))
+            df_res.to_pickle(os.path.join(self.parameters['cv_result_path'],'df_res_cv.pickle'))
 
             best = df_res[df_res['F1_valid']==df_res['F1_valid'].max()]
             self.best_w, self.best_h = best.index[0]
@@ -118,6 +137,10 @@ class Experiment(object):
         results_intent = pd.DataFrame(columns=['n_intent','i','F1_train','F1_test'])
 
         intent_path = os.path.join(self.parameters['dataset_path'], 'intent')
+
+        if self.parameters['model'] == 'SVM':
+            self.base_model.load_wordvectors()
+
         for n_int in self.parameters['n_intents']:
             for i in range(self.parameters['int_runs']):
                 train_fn = f'train_{n_int}_{i}.pickle'
@@ -128,8 +151,6 @@ class Experiment(object):
                 #   check data_path
                 
                 # This is the same as run
-                if self.parameters['model'] == 'SVM':
-                    self.base_model.load_wordvectors()
                 self.base_model.load_data(dataset_path= intent_path,
                                     wordpath= self.parameters['wordpath'],
                                     worddim = self.parameters['worddim'],
@@ -137,7 +158,10 @@ class Experiment(object):
                                     test_fn= test_fn)
                 self.base_model.load_model(wdim = self.parameters['worddim'],
                                     hdim=self.parameters['hdim'])
-                self.F1_train, self.F1_test = self.base_model.train()
+                _, train_results, test_results = self.base_model.train()
+
+                self.F1_train = train_results['F1']
+                self.F1_test = test_results['F1']
                 # End same as run
 
                 results_intent = results_intent.append(dict(n_intent=n_int, i=i,
@@ -148,6 +172,7 @@ class Experiment(object):
                                                 'results_intent.pickle'))
         df_res = results_intent.groupby(by=['n_intent','i'])['F1_train','F1_test'].mean()
         df_res.to_csv(os.path.join(self.parameters['int_result_path'],'df_res_int.csv'))
+        df_res.to_pickle(os.path.join(self.parameters['int_result_path'],'df_res_int.pickle'))
         
         # TODO create a central folder to save F1 intents per model
 
@@ -155,14 +180,14 @@ class Experiment(object):
         N_OBS_LIST = [20,40,60,80]
         results_obs = pd.DataFrame(columns=['n_obs','i','F1_train','F1_test'])
         intent_path = os.path.join(self.parameters['dataset_path'], 'vary_obs')
+        if self.parameters['model'] == 'SVM':
+            self.base_model.load_wordvectors()
         for n_obs in N_OBS_LIST:
             for i in range(self.parameters['obs_runs']):
                 train_fn = f'train_{n_obs}_{i}.pickle'
                 test_fn = f'test.pickle'
 
                 # This is the same as run
-                if self.parameters['model'] == 'SVM':
-                    self.base_model.load_wordvectors()
                 self.base_model.load_data(dataset_path= intent_path,
                                     wordpath= self.parameters['wordpath'],
                                     worddim = self.parameters['worddim'],
@@ -170,7 +195,10 @@ class Experiment(object):
                                     test_fn= test_fn)
                 self.base_model.load_model(wdim = self.parameters['worddim'],
                                     hdim=self.parameters['hdim'])
-                self.F1_train, self.F1_test = self.base_model.train()
+                _, train_results, test_results = self.base_model.train()
+
+                self.F1_train = train_results['F1']
+                self.F1_test = test_results['F1']
                 # End same as run
 
                 results_obs = results_obs.append(dict(n_obs=n_obs, i=i,
@@ -180,7 +208,17 @@ class Experiment(object):
         results_obs.to_pickle(os.path.join(self.parameters['obs_result_path'],
                                                 'results_obs.pickle'))
         df_res = results_obs.groupby(by=['n_obs','i'])['F1_train','F1_test'].mean()
+        df_res.to_pickle(os.path.join(self.parameters['obs_result_path'],'df_res_obs.pickle'))
         df_res.to_csv(os.path.join(self.parameters['obs_result_path'],'df_res_obs.csv'))
+
+    def save_param(self, path=None):
+        if path is None:
+            path=self.parameters['result_path']
+        t = self.parameters['time']
+        param_path = os.path.join(path, f'param_{t}.json')
+        
+        with open(param_path, 'w') as outfile:
+            json.dump(list(self.parameters), outfile)
 
     def create_meta(self):
         # print(f'{self.losses}, {self.F1_train}, {self.F1_test}')
@@ -192,11 +230,11 @@ class Experiment(object):
         # self.meta['best_h'] = self.best_h
 
         # self.meta['losses'] = self.losses
-        self.meta['F1_train'] = self.F1_train
-        self.meta['F1_test'] = self.F1_test
+        # self.meta['F1_train'] = self.F1_train
+        # self.meta['F1_test'] = self.F1_test
 
         meta_path = os.path.join(self.parameters['result_path'], f'meta_{t}.json')
         with open(meta_path, 'w') as outfile:
             json.dump(self.meta, outfile)
 
-        print(f'Done, experiment took: {round(time()-t, 2)}')
+        

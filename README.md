@@ -1,8 +1,23 @@
 # MScThesis
 Master Thesis Econometrics - Intent Classification with Hierarchical and Bayesian Neural Nets
-
+## Install
+```
+git clone 'repo_link'
+cd 'repo_name'
+pip install -r requirements.txt
+```
+## Requirements
+main packages needed
+```
+torch
+scikit-learn
+gensim
+nltk
+```
 ## How to use
-
+```
+python main.py --arg_name arg_value
+```
 ## To-do's
 A list of implementation that need to be done are in the `to-do.md`.
 

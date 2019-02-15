@@ -40,7 +40,7 @@ class BaseModel(object):
         # TODO create re-locate wordvector files to wordvector directory
         if self.parameters['word_vector'] == 'ft':
             self.word_vectors = KeyedVectors.load_word2vec_format('C:\Local_data\wiki.en\wiki.en.vec', binary=False)
-        elif self.parameters['word_vector'] == 'gv':
+        elif self.parameters['word_vector'] == 'gl':
             # if gensim format of GloVe does not exists
             if not os.path.exists('C:\Local_data\glove.6B\gensim_glove.6B.300d.txt'):
                 # convert GloVe to gensim format
@@ -132,6 +132,7 @@ class BaseModel(object):
             self.model = svm_grid
 
     def train(self):
+        meta_data = {}
         if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
             learning_rate = self.parameters['lrate']
             num_epochs = self.parameters['nepch']
@@ -146,12 +147,23 @@ class BaseModel(object):
                 # trainer = Trainer3(self.model, optimizer, self.parameters['result_path'], self.parameters['model'], 
                                     # self.tag_to_id, usedataset= self.parameters['dataset'])
             # train (Bayesian) NN
-            self.losses,_,_,_, self.all_F = trainer.train_model(num_epochs, self.train_data, self.test_data, learning_rate,
+            self.losses, _, all_P, all_R, self.all_F = trainer.train_model(num_epochs, self.train_data, self.test_data, learning_rate,
                                     batch_size = self.parameters['batch_size'],
                                     checkpoint_path = self.parameters['checkpoint_path'])
             # TODO self.losses write losses away to log file
             F1_train = self.all_F[-1][0]
             F1_test = self.all_F[-1][1]
+
+            P_train = all_P[-1][0]
+            P_test = all_P[-1][1]
+            
+            R_train = all_R[-1][0]
+            R_test = all_R[-1][1]
+
+            meta_data['losses'] = self.losses
+            # meta_data['all_F'] = self.all_F
+            # meta_data['all_P'] = all_P
+            # meta_data['all_R'] = all_R
 
             # return F1_train, F1_test
 
@@ -159,34 +171,42 @@ class BaseModel(object):
             self.fitted_model = self.model.fit(self.X_train, self.y_train)
             
             y_hat = self.fitted_model.predict(self.X_test)
-            prec_macro = precision_score(self.y_test, y_hat, average='macro')
-            rec_macro = recall_score(self.y_test, y_hat, average='macro')
+            P_test = precision_score(self.y_test, y_hat, average='macro')
+            R_test = recall_score(self.y_test, y_hat, average='macro')
             F1_test = f1_score(self.y_test, y_hat, average='macro')
 
-            print('recall macro test: ' + str(rec_macro))
-            print('precision macro test: ' + str(prec_macro))
+            print('recall macro test: ' + str(R_test))
+            print('precision macro test: ' + str(P_test))
             print('F1 macro test: ' + str(F1_test))
 
             y_hat_train = self.fitted_model.predict(self.X_train) 
-            prec_macro_train = precision_score(self.y_train, y_hat_train, average='macro')
-            rec_macro_train = recall_score(self.y_train, y_hat_train, average='macro')
+            P_train = precision_score(self.y_train, y_hat_train, average='macro')
+            R_train = recall_score(self.y_train, y_hat_train, average='macro')
             F1_train = f1_score(self.y_train, y_hat_train, average='macro')
 
-            print('recall macro train: ' + str(rec_macro_train))
-            print('precision macro train: ' + str(prec_macro_train))
+            print('recall macro train: ' + str(R_train))
+            print('precision macro train: ' + str(P_train))
             print('F1 macro train: ' + str(F1_train))
 
         elif self.parameters['model'] == 'SVM':
-            CBOW = 'sum'
-            if CBOW == 'sum':
-                _,_, F1, _, _ = self.model(self.train_sum, self.y_train, self.test_sum, self.y_test)
-            elif CBOW == 'ave':
-                _,_, F1, _, _ = self.model(self.train_ave, self.y_train, self.test_ave, self.y_test)
+            cbow = self.parameters['cbow']
+            if cbow == 'sum':
+                R,P, F1, best_param, _ = self.model(self.train_sum, self.y_train, self.test_sum, self.y_test)
+            elif cbow == 'ave':
+                R,P, F1, best_param, _ = self.model(self.train_ave, self.y_train, self.test_ave, self.y_test)
             
             F1_train = F1[1]
             F1_test = F1[0]
+            P_train = P[1]
+            P_test = P[0]
+            R_train = R[1]
+            R_test = R[0]
+
+            meta_data['best_param'] = best_param
         
-        return F1_train, F1_test
+        train_results = {'F1':F1_train, 'P':P_train, 'R':R_train}
+        test_results = {'F1':F1_test, 'P':P_test, 'R':R_test}
+        return meta_data, train_results, test_results
 
     def test(self):
         raise NotImplementedError
