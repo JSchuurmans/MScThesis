@@ -18,14 +18,17 @@ from time import time
 import os
 
 from models.baseModel import BaseModel
-
+from models.hModel import HModel
 
 
 class Experiment(object):
     def __init__(self, parameters):
         self.parameters = parameters
         self.meta = {}
-        self.base_model = BaseModel(parameters)
+        if parameters['hier']:
+            self.base_model = HModel(parameters)
+        else:
+            self.base_model = BaseModel(parameters)
         # self.meta = {}
         # self.model = BaseModel(parameters)
 
@@ -210,6 +213,7 @@ class Experiment(object):
         df_res = results_obs.groupby(by=['n_obs','i'])['F1_train','F1_test'].mean()
         df_res.to_pickle(os.path.join(self.parameters['obs_result_path'],'df_res_obs.pickle'))
         df_res.to_csv(os.path.join(self.parameters['obs_result_path'],'df_res_obs.csv'))
+        
 
     def save_param(self, path=None):
         if path is None:

@@ -27,18 +27,19 @@ nb = Pipeline([
                                    min_df=3)),
     ('classifier', MultinomialNB(alpha=1)),])
 
-# TODO write to class
+# # TODO write to class
 # class NB(object):
 #     def __init__(self):
-#         super(NB)
+#         super(NB).__init__(self)
 
-#         self.nb = Pipeline([
-#             ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
+#     def nb(self):
+#         Pipeline([
+#             ('vectorizer', TfidfVectorizer(tokenizer=self.stemming_tokenizer,
 #                                    stop_words=stopwords.words('english')+ list(string.punctuation),
 #                                    min_df=3)),
 #             ('classifier', MultinomialNB(alpha=1)),])
 
-#     def stemming_tokenizer(text):
+#     def stemming_tokenizer(self, text):
 #         stemmer = PorterStemmer()
 #         return [stemmer.stem(w) for w in word_tokenize(text)]
 

@@ -16,12 +16,21 @@ from models.neural_cls.util import Loader, Trainer
 from models.neural_cls.models import BiLSTM
 from models.neural_cls.models import BiLSTM_BB
 
+from datasets.retail.retail_data_hierarchy import retail_data_hierarchy
+from datasets.braun.braun_data_hierarchy import braun_data_hierarchy
+
 # naive bayes module
-from models.naive_bayes import nb
+from models.naive_bayes import stemming_tokenizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.corpus import stopwords
+import string
 
 # svm
 from datasets.utils import *
 from models.svm import * # svm_grid, experiment_train, experiment_intent
+from models.svm_best import svm_best
 from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 
@@ -29,11 +38,12 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 
-class BaseModel(object):
+class HModel(object):
     def __init__(self, parameters):
         self.parameters = parameters
         # self.meta = {}
         # self.model = BaseModel(parameters)
+        # super(BaseModel)
 
     def load_wordvectors(self):
         # TODO create propper paths
@@ -52,17 +62,28 @@ class BaseModel(object):
             raise NotImplementedError
 
     def load_data(self, dataset_path, wordpath=None, worddim=None, 
-                    train_fn='braun_train.pickle', test_fn='braun_test.pickle', label='intent'):
+                    train_fn='train.pickle', test_fn='test.pickle', label='intent'):
+        
+        # load original data
+        ori_train_path = os.path.join(dataset_path, train_fn)
+        ori_test_path = os.path.join(dataset_path, test_fn)
+
+        df_train = pd.read_pickle(ori_train_path)
+        df_test = pd.read_pickle(ori_test_path)
+
+        if self.parameters['dataset'] == 'braun':
+            self.n_nodes, h_path = braun_data_hierarchy(dataset_path, train_fn, test_fn)
+        elif self.parameters['dataset'] == 'retail':
+            self.n_nodes, h_path = retail_data_hierarchy(dataset_path, train_fn, test_fn)
+        
+        dataset_path = h_path
+        label = 'category'
         
         if self.parameters['model'] in ['LSTM','BiLSTM', 'LSTM_BB','BiLSTM_BB']:
+            
             loader = Loader()
 
-            if self.parameters['dataset'] == 'mareview':
-                self.train_data, self.test_data, mappings = loader.load_mareview(
-                                                            dataset_path, 
-                                                            wordpath, 
-                                                            worddim)
-            elif self.parameters['dataset'] in ['braun','retail','travel','ubuntu','webapp2']:
+            if self.parameters['dataset'] in ['braun','retail','travel','ubuntu','webapp2']:
                 self.train_data, self.test_data, mappings = loader.load_pickle(
                                                             dataset_path, 
                                                             wordpath, 
@@ -73,7 +94,7 @@ class BaseModel(object):
 
             self.word_to_id = mappings['word_to_id']
             self.tag_to_id = mappings['tag_to_id']
-            self.word_embeds = mappings['word_embeds']
+            self.word_embed = mappings['word_embeds']
         
         elif self.parameters['model'] in ['NB','SVM']:
             train_path = os.path.join(dataset_path, train_fn)
@@ -84,18 +105,83 @@ class BaseModel(object):
 
             self.X_train = df_train['utterance'] # TODO make dynamic/note in README
             self.y_train = df_train[label]
+            self.true_train = df_train['intent']
 
             self.X_test = df_test['utterance'] 
-            self.y_test = df_test[label]
+            self.y_test = df_test['intent'] # label
 
             # data loading for SVM
             if self.parameters['model'] =='SVM':
                 texts_train = remove_stopwords(remove_non_alpha_num(self.X_train))
                 texts_test = remove_stopwords(remove_non_alpha_num(self.X_test))
 
-                self.train_sum, self.train_ave = create_input(texts_train, self.word_vectors)
-                self.test_sum, self.test_ave = create_input(texts_test, self.word_vectors)
+                train_sum, train_ave = create_input(texts_train, self.word_vectors)
+                test_sum, test_ave = create_input(texts_test, self.word_vectors)
+                if self.parameters['cbow'] =='sum':
+                    self.X_train, self.X_test = train_sum, test_sum
+                elif self.parameters['cbow'] == 'ave':
+                    self.X_train, self.X_test = train_ave, test_ave
 
+        ##### hierarchical ###############################################################################################
+        label = 'intent' # subclass
+        self.train_datas = []
+        self.test_datas = []
+        self.word_to_ids = []
+        self.tag_to_ids = []
+        self.word_embeds = []
+        self.X_trains = {}
+        self.y_trains = {}
+        self.X_tests = {}
+        self.y_tests = {}
+        train_sums = {}
+        train_aves = {}
+        test_sums = {}
+        test_aves = {}
+        for i in range(self.n_nodes):
+            # print(i)
+            train_fn = f'train{i}.pickle'
+            test_fn = f'test{i}.pickle'
+            if self.parameters['model'] in ['LSTM','BiLSTM', 'LSTM_BB','BiLSTM_BB']:
+                # loader = Loader()
+                
+                if self.parameters['dataset'] in ['braun','retail','travel','ubuntu','webapp2']:
+                    self.train_data[i], self.test_data[i], mappings = loader.load_pickle(
+                                                                dataset_path, 
+                                                                wordpath, 
+                                                                worddim,
+                                                                train_fn,
+                                                                test_fn,
+                                                                label)
+                self.word_to_ids[i] = mappings['word_to_id']
+                self.tag_to_ids[i] = mappings['tag_to_id']
+                self.word_embeds[i] = mappings['word_embeds']
+            
+            elif self.parameters['model'] in ['NB','SVM']:
+                train_path = os.path.join(dataset_path, train_fn)
+                test_path = os.path.join(dataset_path, test_fn)
+
+                df_train = pd.read_pickle(train_path)
+                df_test = pd.read_pickle(test_path)
+
+                self.X_trains[i] = df_train['utterance'] # TODO make dynamic/note in README
+                self.y_trains[i] = df_train[label]
+
+                self.X_tests[i] = df_test['utterance'] 
+                self.y_tests[i] = df_test[label]
+
+                # data loading for SVM
+                if self.parameters['model'] =='SVM':
+                    texts_train = remove_stopwords(remove_non_alpha_num(self.X_trains[i]))
+                    texts_test = remove_stopwords(remove_non_alpha_num(self.X_tests[i]))
+
+                    train_sums[i], train_aves[i] = create_input(texts_train, self.word_vectors)
+                    test_sums[i], test_aves[i] = create_input(texts_test, self.word_vectors)
+                    if self.parameters['cbow'] =='sum':
+                        self.X_trains[i], self.X_tests[i] = train_sums[i], test_sums[i]
+                    elif self.parameters['cbow'] == 'ave':
+                        self.X_trains[i], self.X_tests[i] = train_aves[i], test_aves[i]
+       
+        ################################################################################################
         print('Loading Dataset Complete')
 
     def load_model(self, wdim, hdim):
@@ -115,7 +201,7 @@ class BaseModel(object):
                     print (f"(Bi: {self.parameters['bidir']}) LSTM")
                     self.model = BiLSTM(word_vocab_size, wdim, 
                             hdim, output_size, 
-                            pretrained = self.word_embeds,
+                            pretrained = self.word_embed,
                             bidirectional = bidirectional)
                 # Build Bayesian NN
                 elif self.parameters['model'][-2:] == 'BB':
@@ -123,16 +209,37 @@ class BaseModel(object):
                     sigma_prior = self.parameters['sigmp']
                     self.model = BiLSTM_BB(word_vocab_size, wdim, 
                             hdim, output_size, 
-                            pretrained = self.word_embeds,
+                            pretrained = self.word_embed,
                             bidirectional = bidirectional, 
                             sigma_prior=sigma_prior)
             self.model.cuda()
         
         elif self.parameters['model'] == 'NB':
-            self.model = nb
+            self.model = Pipeline([
+                            ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
+                                   stop_words=stopwords.words('english')+ list(string.punctuation),
+                                   min_df=3)),
+                            ('classifier', MultinomialNB(alpha=1)),])
         
         elif self.parameters['model'] == 'SVM':
-            self.model = svm_grid
+            self.model,_ = svm_best(self.X_train,self.y_train)
+
+        ### hierarchical ######################################################################
+        self.models = {}
+        for i in range(self.n_nodes):
+            if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
+                raise NotImplementedError
+            elif self.parameters['model'] == 'NB':
+                self.models[i] = Pipeline([
+                            ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
+                                   stop_words=stopwords.words('english')+ list(string.punctuation),
+                                   min_df=3)),
+                            ('classifier', MultinomialNB(alpha=1)),])
+                # print(self.models[i])
+            elif self.parameters['model'] == 'SVM':
+                self.models[i], _ = svm_best(self.X_trains[i], self.y_trains[i])
+                
+                # svm.SVC(class_weight='balanced', kernel='rbf', gamma='1000', C=1) # TODO parameters
 
     def train(self):
         meta_data = {}
@@ -170,10 +277,31 @@ class BaseModel(object):
 
             # return F1_train, F1_test
 
-        elif self.parameters['model'] == 'NB':
+        elif self.parameters['model'] in ['NB','SVM']:
+            # print(self.y_train.unique())
             self.fitted_model = self.model.fit(self.X_train, self.y_train)
-            
-            y_hat = self.fitted_model.predict(self.X_test)
+
+            ### hierarchical
+            self.fitted_models = {}
+            for i in range(self.n_nodes):
+                self.fitted_models[i] = self.models[i].fit(self.X_trains[i], self.y_trains[i])
+
+
+            ## prediction #############
+            # print(self.X_test)
+            cat_hat = self.fitted_model.predict(self.X_test)
+            # print(cat_hat)
+
+            # y_hat = [None] * len(cat_hat)
+
+            # print(self.X_test[1])
+
+            y_hat = [self.fitted_models[row].predict([self.X_test[r]]) for r,row in enumerate(cat_hat)]
+
+            # for r, row in enumerate(cat_hat):
+            #     print(self.X_test[r])
+            #     y_hat[r] = self.fitted_models[row].predict([self.X_test[r]])
+
             P_test = precision_score(self.y_test, y_hat, average='macro')
             R_test = recall_score(self.y_test, y_hat, average='macro')
             F1_test = f1_score(self.y_test, y_hat, average='macro')
@@ -181,31 +309,20 @@ class BaseModel(object):
             print('recall macro test: ' + str(R_test))
             print('precision macro test: ' + str(P_test))
             print('F1 macro test: ' + str(F1_test))
+            
 
-            y_hat_train = self.fitted_model.predict(self.X_train) 
-            P_train = precision_score(self.y_train, y_hat_train, average='macro')
-            R_train = recall_score(self.y_train, y_hat_train, average='macro')
-            F1_train = f1_score(self.y_train, y_hat_train, average='macro')
+            # train score
+            cat_hat_train = self.fitted_model.predict(self.X_train)
+            
+            y_hat_train = [self.fitted_models[row].predict([self.X_train[r]]) for r,row in enumerate(cat_hat_train)]
+            
+            P_train = precision_score(self.true_train, y_hat_train, average='macro')
+            R_train = recall_score(self.true_train, y_hat_train, average='macro')
+            F1_train = f1_score(self.true_train, y_hat_train, average='macro')
 
             print('recall macro train: ' + str(R_train))
             print('precision macro train: ' + str(P_train))
             print('F1 macro train: ' + str(F1_train))
-
-        elif self.parameters['model'] == 'SVM':
-            cbow = self.parameters['cbow']
-            if cbow == 'sum':
-                R,P, F1, best_param, _ = self.model(self.train_sum, self.y_train, self.test_sum, self.y_test)
-            elif cbow == 'ave':
-                R,P, F1, best_param, _ = self.model(self.train_ave, self.y_train, self.test_ave, self.y_test)
-            
-            F1_train = F1[1]
-            F1_test = F1[0]
-            P_train = P[1]
-            P_test = P[0]
-            R_train = R[1]
-            R_test = R[0]
-
-            meta_data['best_param'] = best_param
         
         train_results = {'F1':F1_train, 'P':P_train, 'R':R_train}
         test_results = {'F1':F1_test, 'P':P_test, 'R':R_test}

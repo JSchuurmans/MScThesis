@@ -254,7 +254,8 @@ class Loader(object):
         return train_data_final, test_data_final, mappings
 
     def load_pickle(self, datapath, pretrained, word_dim = 300, 
-                    train='Braun_train.pickle', test='Braun_test.pickle'):#, valid=False):
+                    train='Braun_train.pickle', test='Braun_test.pickle',
+                    label='intent'):#, valid=False):
         
         # import pandas as pd
 
@@ -274,8 +275,8 @@ class Loader(object):
         list_test_data = test_data['utterance'].tolist()
         # print(list_train_data)
         
-        train_label = train_data['intent'].tolist()
-        test_label = test_data['intent'].tolist()
+        train_label = train_data[label].tolist()
+        test_label = test_data[label].tolist()
 
         labeled_train_data = []
         for i in range(len(train_label)):

@@ -43,6 +43,8 @@ parser.add_argument('--word_vector', action='store',  dest='word_vector', defaul
                     type=str, help="Type of wordvectors")
 parser.add_argument('--cbow', action='store',  dest='cbow', default='sum', 
                     type=str, help="Type of wordvectors")
+parser.add_argument('--hier', action='store',  dest='hier', default=0, 
+                    type=int, help="User Hierarchical Model")
 
 
 opt = parser.parse_args()
@@ -55,6 +57,8 @@ if parameters['model'] == 'SVM':
     model_name = f"{parameters['model']}_{parameters['word_vector']}_{parameters['cbow']}"
 else:
     model_name = parameters['model']
+if parameters['hier']:
+    model_name = f'h_{model_name}'
 parameters['model_name'] = model_name
 
 parameters['time'] = time()
@@ -64,8 +68,8 @@ WORD_PATHS = {50:"wordvectors/glove.6B.50d.txt",
         200:"wordvectors/glove.6B.200d.txt",
         300:"wordvectors/glove.6B.300d.txt"}
 
-INTENT_RUNS = 2 # TODO 10
-OBS_RUNS = 2 # TODO 10
+INTENT_RUNS = 10
+OBS_RUNS = 10
 
 if parameters['crossval']:
     if parameters['dataset'] in ['braun','travel','ubuntu','webapp']:
@@ -85,9 +89,9 @@ if parameters['intent']:
     if not os.path.exists(parameters['int_result_path']):
         os.makedirs(parameters['int_result_path'])
     if parameters['dataset'] == 'braun':
-        parameters['n_intents'] = range(2,4) # TODO [5,10,15,20,25,30,35,40,45,50]
+        parameters['n_intents'] =  range(2,14)
     if parameters['dataset'] == 'retail':
-        parameters['n_intents'] = range(2,4) # TODO range(2,14)
+        parameters['n_intents'] = [5,10,15,20,25,30,35,40,45,50]
 
 if parameters['vary_obs']:
     parameters['obs_runs'] = OBS_RUNS
