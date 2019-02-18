@@ -108,8 +108,8 @@ class BaseModel(object):
                 print('Building Model............................................................................')
                 word_vocab_size = len(self.word_to_id)
                 # word_embedding_dim = self.parameters['worddim']
-                output_size = self.parameters['opsiz']
                 bidirectional = self.parameters['bidir']
+                output_size = len(self.tag_to_id)
                 # Build NN
                 if self.parameters['model'][-4:] == 'LSTM':
                     print (f"(Bi: {self.parameters['bidir']}) LSTM")
@@ -150,7 +150,8 @@ class BaseModel(object):
                 # trainer = Trainer3(self.model, optimizer, self.parameters['result_path'], self.parameters['model'], 
                                     # self.tag_to_id, usedataset= self.parameters['dataset'])
             # train (Bayesian) NN
-            self.losses, _, all_P, all_R, self.all_F = trainer.train_model(num_epochs, self.train_data, self.test_data, learning_rate,
+            self.losses, _, all_P, all_R, self.all_F = trainer.train_model(num_epochs, self.train_data, 
+                                    self.test_data, learning_rate,
                                     batch_size = self.parameters['batch_size'],
                                     checkpoint_path = self.parameters['checkpoint_path'])
             # TODO self.losses write losses away to log file

@@ -15,6 +15,7 @@ import models.neural_cls
 from models.neural_cls.util import Loader, Trainer
 from models.neural_cls.models import BiLSTM
 from models.neural_cls.models import BiLSTM_BB
+from models.neural_cls.models import h_BiLSTM
 
 from datasets.retail.retail_data_hierarchy import retail_data_hierarchy
 from datasets.braun.braun_data_hierarchy import braun_data_hierarchy
@@ -77,10 +78,9 @@ class HModel(object):
             self.n_nodes, h_path = retail_data_hierarchy(dataset_path, train_fn, test_fn)
         
         dataset_path = h_path
-        label = 'category'
         
         if self.parameters['model'] in ['LSTM','BiLSTM', 'LSTM_BB','BiLSTM_BB']:
-            
+            label = 'intent'
             loader = Loader()
 
             if self.parameters['dataset'] in ['braun','retail','travel','ubuntu','webapp2']:
@@ -94,9 +94,13 @@ class HModel(object):
 
             self.word_to_id = mappings['word_to_id']
             self.tag_to_id = mappings['tag_to_id']
+            print(len(self.tag_to_id))
+            print(self.tag_to_id)
             self.word_embed = mappings['word_embeds']
         
         elif self.parameters['model'] in ['NB','SVM']:
+            label = 'category'
+
             train_path = os.path.join(dataset_path, train_fn)
             test_path = os.path.join(dataset_path, test_fn)
 
@@ -139,26 +143,26 @@ class HModel(object):
         test_aves = {}
         for i in range(self.n_nodes):
             # print(i)
-            train_fn = f'train{i}.pickle'
-            test_fn = f'test{i}.pickle'
-            if self.parameters['model'] in ['LSTM','BiLSTM', 'LSTM_BB','BiLSTM_BB']:
-                # loader = Loader()
+            h_train_fn = f'{i}_{train_fn}'
+            h_test_fn = f'{i}_{test_fn}'
+            # if self.parameters['model'] in ['LSTM','BiLSTM', 'LSTM_BB','BiLSTM_BB']:
+            #     # loader = Loader()
                 
-                if self.parameters['dataset'] in ['braun','retail','travel','ubuntu','webapp2']:
-                    self.train_data[i], self.test_data[i], mappings = loader.load_pickle(
-                                                                dataset_path, 
-                                                                wordpath, 
-                                                                worddim,
-                                                                train_fn,
-                                                                test_fn,
-                                                                label)
-                self.word_to_ids[i] = mappings['word_to_id']
-                self.tag_to_ids[i] = mappings['tag_to_id']
-                self.word_embeds[i] = mappings['word_embeds']
+            #     if self.parameters['dataset'] in ['braun','retail','travel','ubuntu','webapp2']:
+            #         self.train_data[i], self.test_data[i], mappings = loader.load_pickle(
+            #                                                     dataset_path, 
+            #                                                     wordpath, 
+            #                                                     worddim,
+            #                                                     h_train_fn,
+            #                                                     h_test_fn,
+            #                                                     label)
+            #     self.word_to_ids[i] = mappings['word_to_id']
+            #     self.tag_to_ids[i] = mappings['tag_to_id']
+            #     self.word_embeds[i] = mappings['word_embeds']
             
-            elif self.parameters['model'] in ['NB','SVM']:
-                train_path = os.path.join(dataset_path, train_fn)
-                test_path = os.path.join(dataset_path, test_fn)
+            if self.parameters['model'] in ['NB','SVM']:
+                train_path = os.path.join(dataset_path, h_train_fn)
+                test_path = os.path.join(dataset_path, h_test_fn)
 
                 df_train = pd.read_pickle(train_path)
                 df_test = pd.read_pickle(test_path)
@@ -194,12 +198,12 @@ class HModel(object):
                 print('Building Model............................................................................')
                 word_vocab_size = len(self.word_to_id)
                 # word_embedding_dim = self.parameters['worddim']
-                output_size = self.parameters['opsiz']
+                output_size = len(self.tag_to_id)
                 bidirectional = self.parameters['bidir']
                 # Build NN
                 if self.parameters['model'][-4:] == 'LSTM':
                     print (f"(Bi: {self.parameters['bidir']}) LSTM")
-                    self.model = BiLSTM(word_vocab_size, wdim, 
+                    self.model = h_BiLSTM(word_vocab_size, wdim, 
                             hdim, output_size, 
                             pretrained = self.word_embed,
                             bidirectional = bidirectional)
@@ -207,7 +211,7 @@ class HModel(object):
                 elif self.parameters['model'][-2:] == 'BB':
                     print (f"(Bi: {self.parameters['bidir']}) LSTM_BB")
                     sigma_prior = self.parameters['sigmp']
-                    self.model = BiLSTM_BB(word_vocab_size, wdim, 
+                    self.model = h_BiLSTM_BB(word_vocab_size, wdim, 
                             hdim, output_size, 
                             pretrained = self.word_embed,
                             bidirectional = bidirectional, 
@@ -227,9 +231,9 @@ class HModel(object):
         ### hierarchical ######################################################################
         self.models = {}
         for i in range(self.n_nodes):
-            if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
-                raise NotImplementedError
-            elif self.parameters['model'] == 'NB':
+            # if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
+            #     raise NotImplementedError
+            if self.parameters['model'] == 'NB':
                 self.models[i] = Pipeline([
                             ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
                                    stop_words=stopwords.words('english')+ list(string.punctuation),

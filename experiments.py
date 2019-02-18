@@ -222,6 +222,7 @@ class Experiment(object):
         param_path = os.path.join(path, f'param_{t}.json')
         
         with open(param_path, 'w') as outfile:
+            # TODO only prints list of keys
             json.dump(list(self.parameters), outfile)
 
     def create_meta(self):

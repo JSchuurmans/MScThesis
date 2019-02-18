@@ -146,3 +146,40 @@ def log_gaussian_logsigma(x, mu, logsigma):
 
 def bayes_loss_function(l_pw, l_qw, l_likelihood, n_batches, batch_size):
     return ((1./n_batches) * (l_qw - l_pw) - l_likelihood).sum() / float(batch_size)
+
+# def align(x, y, start_dim=2):
+#     xd, yd = x.dim(), y.dim()
+#     if xd > yd:
+#         for i in range(xd - yd): y = y.unsqueeze(0)
+#     elif yd > xd:
+#         for i in range(yd - xd): x = x.unsqueeze(0)
+#     xs = list(x.size())
+#     ys = list(y.size())
+#     nd = len(ys)
+#     for i in range(start_dim, nd):
+#         td = nd-i-1
+#         if   ys[td]==1: ys[td] = xs[td]
+#         elif xs[td]==1: xs[td] = ys[td]
+#     return x.expand(*xs), y.expand(*ys)
+
+# def dot(x, y):
+#     x, y = align(x, y)
+#     assert(1<y.dim()<5)
+#     if y.dim() == 2:
+#         return x.mm(y)
+#     elif y.dim() == 3: 
+#         return x.bmm(y)
+#     else:
+#         xs,ys = x.size(), y.size()
+#         res = torch.zeros(*(xs[:-1] + (ys[-1],)))
+#         for i in range(xs[0]): res[i] = x[i].bmm(y[i])
+#         return res
+
+# def aligned_op(x,y,f):
+#     x, y = align(x,y,0)
+#     return f(x, y)
+
+# def add(x, y): return aligned_op(x, y, torch.add)
+# def sub(x, y): return aligned_op(x, y, torch.sub)
+# def mul(x, y): return aligned_op(x, y, torch.mul)
+# def div(x, y): return aligned_op(x, y, torch.truediv)

@@ -92,7 +92,7 @@ class Trainer(object):
                 elif self.model_name[-2:] == 'BB':
                     score = self.model(words, tags, wordslen, n_batches)
                 
-                loss += score.data[0]/len(wordslen)
+                loss += score.item()/len(wordslen) #TODO pytorch v.3: score.data[0]/len(wordslen)
                 score.backward()
                 
                 nn.utils.clip_grad_norm(self.model.parameters(), 5.0)
@@ -145,6 +145,7 @@ class Trainer(object):
                     best_train_A, new_train_A, best_train_P, new_train_P, best_train_R, new_train_R, best_train_F, new_train_F, _ = 0, 0, 0, 0, 0, 0, 0, 0, 0
                 best_test_A, new_test_A, best_test_P, new_test_P, best_test_R, new_test_R,best_test_F, new_test_F, save = self.evaluator(self.model, test_data, 
                                                                 best_test_A, best_test_P, best_test_R, best_test_F)
+                # TODO dont save the best model based on test score
                 if save:
                     print ('*'*80)
                     print ('Saving Best Weights')

@@ -72,7 +72,7 @@ INTENT_RUNS = 10
 OBS_RUNS = 10
 
 if parameters['crossval']:
-    if parameters['dataset'] in ['braun','travel','ubuntu','webapp']:
+    if parameters['dataset'] in ['braun','travel','ubuntu','webapp','webapp2']:
         parameters['kfold'] = 2
     elif parameters['dataset'] == 'retail':
         parameters['kfold'] = 5
@@ -89,7 +89,7 @@ if parameters['intent']:
     if not os.path.exists(parameters['int_result_path']):
         os.makedirs(parameters['int_result_path'])
     if parameters['dataset'] == 'braun':
-        parameters['n_intents'] =  range(2,14)
+        parameters['n_intents'] =  range(5,14) # TODO range(2,14) gives error for crossval SVM
     if parameters['dataset'] == 'retail':
         parameters['n_intents'] = [5,10,15,20,25,30,35,40,45,50]
 
@@ -115,6 +115,7 @@ if not os.path.exists(parameters['checkpoint_path']):
     os.makedirs(parameters['checkpoint_path'])  
 
 
+
 # model specific parameters
 if opt.model == 'LSTM':
     parameters['bidir'] = False
@@ -126,7 +127,7 @@ if opt.model == 'LSTM':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 14
+        # parameters['opsiz'] = 14
 
     elif opt.dataset == 'retail':
         parameters['dpout'] = 0.5
@@ -135,7 +136,7 @@ if opt.model == 'LSTM':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 54
+        # parameters['opsiz'] = 54
     
     elif opt.dataset == 'travel':
         parameters['dpout'] = 0.5
@@ -144,7 +145,7 @@ if opt.model == 'LSTM':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 2
+        # parameters['opsiz'] = 2
 
     elif opt.dataset == 'ubuntu':
         parameters['dpout'] = 0.5
@@ -153,7 +154,7 @@ if opt.model == 'LSTM':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 5 # TODO
+        # parameters['opsiz'] = 5 # TODO
 
     elif opt.dataset == 'webapp2':
         parameters['dpout'] = 0.5
@@ -162,7 +163,7 @@ if opt.model == 'LSTM':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 7 # TODO
+        # parameters['opsiz'] = 7 # TODO
 
 elif opt.model == 'BiLSTM':
     parameters['bidir'] = True
@@ -174,7 +175,7 @@ elif opt.model == 'BiLSTM':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 50
-        parameters['opsiz'] = 2 # 6 for trec2
+        # parameters['opsiz'] = 2 # 6 for trec2
     
     elif opt.dataset == 'braun':
         parameters['dpout'] = 0.5
@@ -183,7 +184,7 @@ elif opt.model == 'BiLSTM':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 14 # 6 for trec2
+        # parameters['opsiz'] = 14 # 6 for trec2
 
     elif opt.dataset == 'retail':
         parameters['dpout'] = 0.5
@@ -192,7 +193,7 @@ elif opt.model == 'BiLSTM':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 54 # 6 for trec2
+        # parameters['opsiz'] = 54 # 6 for trec2
 
     elif opt.dataset == 'travel':
         parameters['dpout'] = 0.5
@@ -201,7 +202,7 @@ elif opt.model == 'BiLSTM':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 2
+        # parameters['opsiz'] = 2
 
     elif opt.dataset == 'ubuntu':
         parameters['dpout'] = 0.5
@@ -210,7 +211,7 @@ elif opt.model == 'BiLSTM':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 5 # TODO
+        # parameters['opsiz'] = 5 # TODO
 
     elif opt.dataset == 'webapp2':
         parameters['dpout'] = 0.5
@@ -219,7 +220,7 @@ elif opt.model == 'BiLSTM':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 7 # TODO
+        # parameters['opsiz'] = 7 # TODO
 
 elif opt.model == 'LSTM_BB':
 
@@ -233,7 +234,7 @@ elif opt.model == 'LSTM_BB':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 14 # 6 for trec2
+        # parameters['opsiz'] = 14 # 6 for trec2
 
     elif opt.dataset == 'retail':
         parameters['dpout'] = 0.5
@@ -242,7 +243,7 @@ elif opt.model == 'LSTM_BB':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 54 # 6 for trec2
+        # parameters['opsiz'] = 54 # 6 for trec2
 
     elif opt.dataset == 'travel':
         parameters['dpout'] = 0.5
@@ -251,7 +252,7 @@ elif opt.model == 'LSTM_BB':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 2
+        # parameters['opsiz'] = 2
 
     elif opt.dataset == 'ubuntu':
         parameters['dpout'] = 0.5
@@ -260,7 +261,7 @@ elif opt.model == 'LSTM_BB':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 5 # TODO
+        # parameters['opsiz'] = 5 # TODO
 
     elif opt.dataset == 'webapp2':
         parameters['dpout'] = 0.5
@@ -269,7 +270,7 @@ elif opt.model == 'LSTM_BB':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 7 # TODO
+        # parameters['opsiz'] = 7 # TODO
 
 elif opt.model == 'BiLSTM_BB':
     parameters['bidir'] = True
@@ -282,7 +283,7 @@ elif opt.model == 'BiLSTM_BB':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 50
-        parameters['opsiz'] = 2 # 6 for trec2
+        # parameters['opsiz'] = 2 # 6 for trec2
     
     elif opt.dataset == 'braun':
         parameters['dpout'] = 0.5
@@ -291,7 +292,7 @@ elif opt.model == 'BiLSTM_BB':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 14 # 6 for trec2
+        # parameters['opsiz'] = 14 # 6 for trec2
 
     elif opt.dataset == 'retail':
         parameters['dpout'] = 0.5
@@ -300,7 +301,7 @@ elif opt.model == 'BiLSTM_BB':
         
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 54 # 6 for trec2
+        # parameters['opsiz'] = 54 # 6 for trec2
 
     elif opt.dataset == 'travel':
         parameters['dpout'] = 0.5
@@ -309,7 +310,7 @@ elif opt.model == 'BiLSTM_BB':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 2
+        # parameters['opsiz'] = 2
 
     elif opt.dataset == 'ubuntu':
         parameters['dpout'] = 0.5
@@ -318,7 +319,7 @@ elif opt.model == 'BiLSTM_BB':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 5 # TODO
+        # parameters['opsiz'] = 5 # TODO
 
     elif opt.dataset == 'webapp2':
         parameters['dpout'] = 0.5
@@ -327,18 +328,11 @@ elif opt.model == 'BiLSTM_BB':
 
         parameters['lrate'] = 0.001
         parameters['batch_size'] = 10
-        parameters['opsiz'] = 7 # TODO
+        # parameters['opsiz'] = 7 # TODO
 
-elif opt.model == 'NB' and opt.dataset == 'braun':
+elif opt.model == 'NB':
     print(f'Model: {opt.model}, Dataset: {opt.dataset}')
-
-elif opt.model == 'NB' and opt.dataset == 'retail':
-    print(f'Model: {opt.model}, Dataset: {opt.dataset}')
-
-elif opt.model == 'SVM' and opt.dataset == 'braun':
-    print(f'Model: {opt.model}, Dataset: {opt.dataset}')
-
-elif opt.model == 'SVM' and opt.dataset == 'retail':
+elif opt.model == 'SVM':
     print(f'Model: {opt.model}, Dataset: {opt.dataset}')
 else:
     raise NotImplementedError()
