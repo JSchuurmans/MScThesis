@@ -14,10 +14,11 @@ class h_BiLSTM(nn.Module):
     
     def __init__(self, word_vocab_size, word_embedding_dim, word_hidden_dim, output_size, 
                  pretrained=None, n_layers = 1, bidirectional = True, dropout_p = 0.5, 
-                 rnn_cell='lstm', n_cat = 3, n_sub_classes = [2,5,7]):
+                 rnn_cell='lstm',tag_to_id={'name':0} , n_cat = 3, n_sub_classes = [2,5,7],
+                 dataset = 'braun'):
         
         super(h_BiLSTM, self).__init__()
-        
+
         self.word_vocab_size = word_vocab_size
         self.word_embedding_dim = word_embedding_dim
         self.word_hidden_dim = word_hidden_dim
@@ -39,7 +40,8 @@ class h_BiLSTM(nn.Module):
         hidden_size = 2*n_layers*word_hidden_dim if bidirectional and rnn_cell=='lstm' else n_layers*word_hidden_dim
         
         # hierachy
-        self.decoder = HierarchicalSoftmax(ntokens= output_size, nhid = hidden_size) #, n_cat, n_sub_classes)
+        self.decoder = HierarchicalSoftmax(ntokens= output_size, nhid = hidden_size, 
+                                        tag_to_id = tag_to_id, dataset = dataset) #, n_cat, n_sub_classes)
         
         self.lossfunc = nn.CrossEntropyLoss()
         
@@ -70,5 +72,4 @@ class h_BiLSTM(nn.Module):
             return scores
         
         prediction = torch.max(output, dim=1)[1].data.cpu().numpy().tolist()
-        print(prediction)
         return scores, prediction

@@ -23,9 +23,24 @@ class LinearDecoder(nn.Module):
 
 
 class HierarchicalSoftmax(nn.Module):
-    def __init__(self, ntokens, nhid, ntokens_per_class = None):
+    def __init__(self, ntokens, nhid, tag_to_id, dataset='braun', ntokens_per_class = None):
         super(HierarchicalSoftmax, self).__init__()
 
+        if dataset == 'braun':
+            n_cat = 3
+            n_subclasses = [2,5,8]
+            # travel scheduling
+            # ts = ['DepartureTime','FindConnection']
+            # # AskUbuntu
+            # au = ['Make Update', 'Setup Printer', 'Shutdown Computer',
+            #         'Software Recommendation', 'None ask_ubuntu']
+            # # webapp
+            # wa = ['Change Password', 'Delete Account', 'Export Data', 'Filter Spam', 
+            #         'Find Alternative', 'Sync Accounts', 'None web_app', 'Download Video']
+            # li = [ts,au,wa]
+        elif dataset == 'retail':
+            n_cat = 7
+            n_subclasses = [2,2,15,6,3,2,7]
         # Parameters
         self.ntokens = ntokens
         self.nhid = nhid
@@ -40,6 +55,7 @@ class HierarchicalSoftmax(nn.Module):
 
         self.layer_top_W = nn.Parameter(torch.FloatTensor(self.nhid, self.nclasses), requires_grad=True)
         self.layer_top_b = nn.Parameter(torch.FloatTensor(self.nclasses), requires_grad=True)
+
 
         self.layer_bottom_W = nn.Parameter(torch.FloatTensor(self.nclasses, self.nhid, self.ntokens_per_class), requires_grad=True)
         self.layer_bottom_b = nn.Parameter(torch.FloatTensor(self.nclasses, self.ntokens_per_class), requires_grad=True)
@@ -81,7 +97,7 @@ class HierarchicalSoftmax(nn.Module):
         else:
             
             
-            print(f'input size: {inputs.size()}')
+            # print(f'input size: {inputs.size()}')
             # Remain to be implemented
             layer_top_logits = torch.matmul(inputs, self.layer_top_W) + self.layer_top_b
             layer_top_probs = self.softmax(layer_top_logits)
@@ -94,10 +110,10 @@ class HierarchicalSoftmax(nn.Module):
             
             # word_probs = broad_ltp * tmp
             word_probs = layer_top_probs[:,0] * torch.t(self.softmax(torch.matmul(inputs, self.layer_bottom_W[0]) + self.layer_bottom_b[0])) # .transpose(0,1)
-            print(f'wordprob before concat: {word_probs.size()}')
+            # print(f'wordprob before concat: {word_probs.size()}')
 
             for i in range(1, self.nclasses):
                 word_probs = torch.cat((word_probs, layer_top_probs[:,i] * torch.t(self.softmax(torch.matmul(inputs, self.layer_bottom_W[i]) + self.layer_bottom_b[i]))), dim=0)
 
-            print(f'after concat and t(): {torch.t(word_probs).size()}')
+            # print(f'after concat and t(): {torch.t(word_probs).size()}')
             return torch.t(word_probs)

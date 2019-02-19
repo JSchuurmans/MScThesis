@@ -206,7 +206,9 @@ class HModel(object):
                     self.model = h_BiLSTM(word_vocab_size, wdim, 
                             hdim, output_size, 
                             pretrained = self.word_embed,
-                            bidirectional = bidirectional)
+                            bidirectional = bidirectional,
+                            tag_to_id = self.tag_to_id,
+                            dataset = self.parameters['dataset']) #TODO hierarchy
                 # Build Bayesian NN
                 elif self.parameters['model'][-2:] == 'BB':
                     print (f"(Bi: {self.parameters['bidir']}) LSTM_BB")
