@@ -232,20 +232,26 @@ class HModel(object):
 
         ### hierarchical ######################################################################
         self.models = {}
-        for i in range(self.n_nodes):
-            # if self.parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
-            #     raise NotImplementedError
-            if self.parameters['model'] == 'NB':
-                self.models[i] = Pipeline([
-                            ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
-                                   stop_words=stopwords.words('english')+ list(string.punctuation),
-                                   min_df=3)),
-                            ('classifier', MultinomialNB(alpha=1)),])
-                # print(self.models[i])
-            elif self.parameters['model'] == 'SVM':
-                self.models[i], _ = svm_best(self.X_trains[i], self.y_trains[i])
+
+        if self.parameters['model'] in ['NB','SVM']:
+            for i in range(self.n_nodes):
                 
-                # svm.SVC(class_weight='balanced', kernel='rbf', gamma='1000', C=1) # TODO parameters
+                if len(self.y_trains[i].unique())==1:
+                    # no deeper hierarchical level
+                    self.models[i] = None
+                    continue
+                
+                if self.parameters['model'] == 'NB':
+                    self.models[i] = Pipeline([
+                                ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
+                                    stop_words=stopwords.words('english')+ list(string.punctuation),
+                                    min_df=3)),
+                                ('classifier', MultinomialNB(alpha=1)),])
+                    # print(self.models[i])
+                elif self.parameters['model'] == 'SVM':
+                    self.models[i], _ = svm_best(self.X_trains[i], self.y_trains[i])
+                    
+                    # svm.SVC(class_weight='balanced', kernel='rbf', gamma='1000', C=1) # TODO parameters
 
     def train(self):
         meta_data = {}
@@ -290,7 +296,10 @@ class HModel(object):
             ### hierarchical
             self.fitted_models = {}
             for i in range(self.n_nodes):
-                self.fitted_models[i] = self.models[i].fit(self.X_trains[i], self.y_trains[i])
+                if self.models[i] is None: # len(self.y_trains[i].unique())==1:
+                    self.fitted_models[i] = None # continue
+                else:
+                    self.fitted_models[i] = self.models[i].fit(self.X_trains[i], self.y_trains[i])
 
 
             ## prediction #############
@@ -302,7 +311,13 @@ class HModel(object):
 
             # print(self.X_test[1])
 
-            y_hat = [self.fitted_models[row].predict([self.X_test[r]]) for r,row in enumerate(cat_hat)]
+            y_hat = list()
+            for r,row in enumerate(cat_hat):
+                if self.fitted_models[row] is None:
+                    y_hat.append(self.y_trains[i].iloc[0])
+                else:
+                    y_hat.extend(self.fitted_models[row].predict([self.X_test[r]]))
+            # y_hat = [self.fitted_models[row].predict([self.X_test[r]]) for r,row in enumerate(cat_hat)]
 
             # for r, row in enumerate(cat_hat):
             #     print(self.X_test[r])
@@ -320,8 +335,16 @@ class HModel(object):
             # train score
             cat_hat_train = self.fitted_model.predict(self.X_train)
             
-            y_hat_train = [self.fitted_models[row].predict([self.X_train[r]]) for r,row in enumerate(cat_hat_train)]
+            # TODO look at test predictions
+            # y_hat_train = [self.fitted_models[row].predict([self.X_train[r]]) for r,row in enumerate(cat_hat_train)]
             
+            y_hat_train = list()
+            for r,row in enumerate(cat_hat_train):
+                if self.fitted_models[row] is None:
+                    y_hat_train.append(self.y_trains[i].iloc[0])
+                else:
+                    y_hat_train.extend(self.fitted_models[row].predict([self.X_train[r]]))
+
             P_train = precision_score(self.true_train, y_hat_train, average='macro')
             R_train = recall_score(self.true_train, y_hat_train, average='macro')
             F1_train = f1_score(self.true_train, y_hat_train, average='macro')
