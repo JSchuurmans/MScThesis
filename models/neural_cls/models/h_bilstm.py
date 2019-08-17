@@ -9,13 +9,15 @@ from models.neural_cls.util import Initializer
 from models.neural_cls.util import Loader
 from models.neural_cls.modules import EncoderRNN
 from models.neural_cls.modules.softmax import HierarchicalSoftmax
+# from models.neural_cls.modules.softmax import HierarchicalSoftmax2
 
 class h_BiLSTM(nn.Module):
     
     def __init__(self, word_vocab_size, word_embedding_dim, word_hidden_dim, output_size, 
                  pretrained=None, n_layers = 1, bidirectional = True, dropout_p = 0.5, 
-                 rnn_cell='lstm',tag_to_id={'name':0} , n_cat = 3, n_sub_classes = [2,5,7],
-                 dataset = 'braun'):
+                 rnn_cell='lstm',
+                #  tag_to_id={'name':0} , 
+                 n_subclasses = [2,5,8]):
         
         super(h_BiLSTM, self).__init__()
 
@@ -41,7 +43,9 @@ class h_BiLSTM(nn.Module):
         
         # hierachy
         self.decoder = HierarchicalSoftmax(ntokens= output_size, nhid = hidden_size, 
-                                        tag_to_id = tag_to_id, dataset = dataset) #, n_cat, n_sub_classes)
+                                        # tag_to_id = tag_to_id, 
+                                        n_subclasses = n_subclasses
+                                        ) #, n_cat, n_sub_classes)
         
         self.lossfunc = nn.CrossEntropyLoss()
         

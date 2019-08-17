@@ -21,11 +21,14 @@ def stemming_tokenizer(text):
     stemmer = PorterStemmer()
     return [stemmer.stem(w) for w in word_tokenize(text)]
 
-nb = Pipeline([
-    ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
-                                   stop_words=stopwords.words('english')+ list(string.punctuation),
-                                   min_df=3)),
-    ('classifier', MultinomialNB(alpha=1)),])
+def nb_pipe(max_ngram):
+    nb = Pipeline([
+        ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
+                                    stop_words=stopwords.words('english')+ list(string.punctuation),
+                                    min_df=3,
+                                    ngram_range=(1,max_ngram))),
+        ('classifier', MultinomialNB(alpha=1)),])
+    return nb
 
 # # TODO write to class
 # class NB(object):

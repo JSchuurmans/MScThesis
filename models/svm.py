@@ -11,7 +11,7 @@ from sklearn.metrics import confusion_matrix
 
 import pandas as pd
 
-def svm_grid(X, y, X_test, y_test, class_weight='balanced'):
+def svm_grid(X, y, X_test, y_test, cv, class_weight='balanced'):
 
 	param_grid = [
 	  {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['linear']},
@@ -20,7 +20,7 @@ def svm_grid(X, y, X_test, y_test, class_weight='balanced'):
 
 	clf = svm.SVC(class_weight=class_weight)
 
-	grid = GridSearchCV(clf, param_grid=param_grid, scoring='f1_macro', cv=4)
+	grid = GridSearchCV(clf, param_grid=param_grid, scoring='f1_macro', cv=cv) # cv=StratifiedKFold(n_splits=cv)
 	paramsearch = grid.fit(X,y)
 
 	param_cv_results = pd.DataFrame(paramsearch.cv_results_) # return this
@@ -42,7 +42,7 @@ def svm_grid(X, y, X_test, y_test, class_weight='balanced'):
 	rec_macro_train = recall_score(y,y_hat_train, average='macro')
 	f1_macro_train = f1_score(y,y_hat_train, average= 'macro')
 
-	return [rec_macro,rec_macro_train], [prec_macro,prec_macro_train], [f1_macro,f1_macro_train], param_cv_results, confusion
+	return [rec_macro,rec_macro_train], [prec_macro,prec_macro_train], [f1_macro,f1_macro_train], {'best_param':paramsearch.best_params_, 'best_score':paramsearch.best_score_}, confusion
 
 def experiment_train(percent, word_vectors, class_weight='balanced'):
 	# global results_train

@@ -24,17 +24,19 @@ from models.hModel import HModel
 class Experiment(object):
     def __init__(self, parameters):
         self.parameters = parameters
-        self.meta = {}
+        self.meta = dict()
         if parameters['hier']:
             self.base_model = HModel(parameters)
         else:
             self.base_model = BaseModel(parameters)
         # self.meta = {}
         # self.model = BaseModel(parameters)
+        if self.parameters['model'] in ["SVM",'LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
+            self.base_model.load_wordvectors()
 
     def run(self):
-        if self.parameters['model'] == 'SVM':
-            self.base_model.load_wordvectors()
+        # if self.parameters['model'] == 'SVM':
+        #     self.base_model.load_wordvectors()
         self.base_model.load_data(dataset_path= self.parameters['dataset_path'],
                                     wordpath= self.parameters['wordpath'],
                                     worddim = self.parameters['worddim'],
@@ -43,9 +45,6 @@ class Experiment(object):
         self.base_model.load_model(wdim= self.parameters['worddim'],
                                     hdim= self.parameters['hdim'])
         meta_data, train_results, test_results = self.base_model.train()
-
-        # F1_train = train_results['F1']
-        # F1_test = test_results['F1']
 
         df_res = pd.DataFrame({'model':[self.parameters['model_name']],
                                 'F1_train':[train_results['F1']],
@@ -223,7 +222,7 @@ class Experiment(object):
         
         with open(param_path, 'w') as outfile:
             # TODO only prints list of keys
-            json.dump(list(self.parameters), outfile)
+            json.dump(self.parameters, outfile)
 
     def create_meta(self):
         # print(f'{self.losses}, {self.F1_train}, {self.F1_test}')
@@ -241,5 +240,3 @@ class Experiment(object):
         meta_path = os.path.join(self.parameters['result_path'], f'meta_{t}.json')
         with open(meta_path, 'w') as outfile:
             json.dump(self.meta, outfile)
-
-        

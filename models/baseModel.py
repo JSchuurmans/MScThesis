@@ -17,7 +17,7 @@ from models.neural_cls.models import BiLSTM
 from models.neural_cls.models import BiLSTM_BB
 
 # naive bayes module
-from models.naive_bayes import nb
+from models.naive_bayes import nb_pipe
 
 # svm
 from datasets.utils import *
@@ -34,6 +34,7 @@ class BaseModel(object):
         self.parameters = parameters
         # self.meta = {}
         # self.model = BaseModel(parameters)
+        self.word_vectors = None
 
     def load_wordvectors(self):
         # TODO create propper paths
@@ -69,7 +70,8 @@ class BaseModel(object):
                                                             worddim,
                                                             train_fn,
                                                             test_fn,
-                                                            label)
+                                                            label,
+                                                            self.word_vectors)
 
             self.word_to_id = mappings['word_to_id']
             self.tag_to_id = mappings['tag_to_id']
@@ -129,7 +131,7 @@ class BaseModel(object):
             self.model.cuda()
         
         elif self.parameters['model'] == 'NB':
-            self.model = nb
+            self.model = nb_pipe(self.parameters['ngram'])
         
         elif self.parameters['model'] == 'SVM':
             self.model = svm_grid
@@ -195,9 +197,9 @@ class BaseModel(object):
         elif self.parameters['model'] == 'SVM':
             cbow = self.parameters['cbow']
             if cbow == 'sum':
-                R,P, F1, best_param, _ = self.model(self.train_sum, self.y_train, self.test_sum, self.y_test)
+                R,P, F1, cv_res, _ = self.model(self.train_sum, self.y_train, self.test_sum, self.y_test, self.parameters['kfold'])
             elif cbow == 'ave':
-                R,P, F1, best_param, _ = self.model(self.train_ave, self.y_train, self.test_ave, self.y_test)
+                R,P, F1, cv_res, _ = self.model(self.train_ave, self.y_train, self.test_ave, self.y_test, self.parameters['kfold'])
             
             F1_train = F1[1]
             F1_test = F1[0]
@@ -206,7 +208,8 @@ class BaseModel(object):
             R_train = R[1]
             R_test = R[0]
 
-            meta_data['best_param'] = best_param
+            meta_data['best_param'] = cv_res['best_param']
+            meta_data['best_score'] = cv_res['best_score']
         
         train_results = {'F1':F1_train, 'P':P_train, 'R':R_train}
         test_results = {'F1':F1_test, 'P':P_test, 'R':R_test}

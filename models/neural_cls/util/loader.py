@@ -179,101 +179,19 @@ class Loader(object):
                 
         return train_data_final, test_data_final, mappings
 
-    def load_retail(self, datapath, pretrained, word_dim = 300, valid=False):
-        
-        if valid:
-            trainpath = os.path.join(datapath, 'Marie_train_80.pickle')
-            testpath = os.path.join(datapath, 'Marie_valid.pickle')
-        else:
-            trainpath = os.path.join(datapath, 'Marie_train.pickle')
-            testpath = os.path.join(datapath, 'Marie_test.pickle')
-
-        train_data = pd.read_pickle(trainpath)
-        test_data = pd.read_pickle(testpath)
-        # print(train_data)
-
-        list_train_data = train_data['utterance'].tolist()
-        list_test_data = test_data['utterance'].tolist()
-        # print(list_train_data)
-        
-        train_label = train_data['intent'].tolist()
-        test_label = test_data['intent'].tolist()
-
-        labeled_train_data = []
-        for i in range(len(train_label)):
-            sentence = list_train_data[i]
-            tag = train_label[i]
-            labeled_train_data.append((sentence,tag))
-
-        labeled_test_data = []
-        for i in range(len(test_label)):
-            sentence = list_test_data[i]
-            tag = test_label[i]
-            labeled_test_data.append((sentence,tag))            
-
-
-        dico_words_train = self.word_mapping(labeled_train_data)[0]
-
-        all_embedding = False
-        dico_words, word_to_id, id_to_word = augment_with_pretrained(
-                dico_words_train.copy(),
-                pretrained,
-                list(itertools.chain.from_iterable(
-                    [[w.lower() for w in s[0].split()] for s in labeled_test_data])
-                ) if not all_embedding else None)
-        
-        dico_tags, tag_to_id, id_to_tag = tag_mapping(labeled_train_data)
-        
-        train_data_final = prepare_dataset(labeled_train_data, word_to_id, tag_to_id)
-        test_data_final = prepare_dataset(labeled_test_data, word_to_id, tag_to_id)
-        
-        
-        all_word_embeds = {}
-        for i, line in enumerate(codecs.open(pretrained, 'r', 'utf-8')):
-            s = line.strip().split()
-            if len(s) == word_dim + 1:
-                all_word_embeds[s[0]] = np.array([float(i) for i in s[1:]])
-
-        word_embeds = np.random.uniform(-np.sqrt(0.06), np.sqrt(0.06), (len(word_to_id), word_dim))
-
-        for w in word_to_id:
-            if w in all_word_embeds:
-                word_embeds[word_to_id[w]] = all_word_embeds[w]
-            elif w.lower() in all_word_embeds:
-                word_embeds[word_to_id[w]] = all_word_embeds[w.lower()]
-
-        print('Loaded %i pretrained embeddings.' % len(all_word_embeds))
-
-        mappings = {
-            'word_to_id': word_to_id,
-            'tag_to_id': tag_to_id,
-            'id_to_tag': id_to_tag,
-            'word_embeds': word_embeds
-        }
-
-        return train_data_final, test_data_final, mappings
-
     def load_pickle(self, datapath, pretrained, word_dim = 300, 
                     train='Braun_train.pickle', test='Braun_test.pickle',
-                    label='intent'):#, valid=False):
+                    label='intent', word_vectors=None,
+                    tags=None):#, valid=False):
         
-        # import pandas as pd
-
-        # if valid:
-        #     trainpath = os.path.join(datapath, 'braun_train_80.pickle')
-        #     testpath = os.path.join(datapath, 'braun_valid.pickle')
-        # else:
         trainpath = os.path.join(datapath, train)
         testpath = os.path.join(datapath, test)
 
-        
         train_data = pd.read_pickle(trainpath)
         test_data = pd.read_pickle(testpath)
-        # print(train_data)
 
         list_train_data = train_data['utterance'].tolist()
         list_test_data = test_data['utterance'].tolist()
-        # print(list_train_data)
         
         train_label = train_data[label].tolist()
         test_label = test_data[label].tolist()
@@ -301,25 +219,40 @@ class Loader(object):
                     [[w.lower() for w in s[0].split()] for s in labeled_test_data])
                 ) if not all_embedding else None)
         
-        dico_tags, tag_to_id, id_to_tag = tag_mapping(labeled_train_data)
-        
+        if tags is None:
+            dico_tags, tag_to_id, id_to_tag = tag_mapping(labeled_train_data)
+        else:
+            tag_to_id, id_to_tag = tags
+
         train_data_final = prepare_dataset(labeled_train_data, word_to_id, tag_to_id)
         test_data_final = prepare_dataset(labeled_test_data, word_to_id, tag_to_id)
         
-        
+        word_embeds = np.random.uniform(-np.sqrt(0.06), np.sqrt(0.06), (len(word_to_id), word_dim))
+
         all_word_embeds = {}
         for i, line in enumerate(codecs.open(pretrained, 'r', 'utf-8')):
             s = line.strip().split()
             if len(s) == word_dim + 1:
                 all_word_embeds[s[0]] = np.array([float(i) for i in s[1:]])
 
-        word_embeds = np.random.uniform(-np.sqrt(0.06), np.sqrt(0.06), (len(word_to_id), word_dim))
+        words_not_in_vocab = set()
+        if word_vectors is not None:
+            for w in word_to_id:
+                try:
+                    if w in all_word_embeds:
+                        word_embeds[word_to_id[w]] = word_vectors[w]
+                    elif w.lower() in all_word_embeds:
+                        word_embeds[word_to_id[w]] = word_vectors[w.lower()]
+                except:
+                    words_not_in_vocab.add(w)
 
-        for w in word_to_id:
-            if w in all_word_embeds:
-                word_embeds[word_to_id[w]] = all_word_embeds[w]
-            elif w.lower() in all_word_embeds:
-                word_embeds[word_to_id[w]] = all_word_embeds[w.lower()]
+                
+        else:
+            for w in word_to_id:
+                if w in all_word_embeds:
+                    word_embeds[word_to_id[w]] = all_word_embeds[w]
+                elif w.lower() in all_word_embeds:
+                    word_embeds[word_to_id[w]] = all_word_embeds[w.lower()]
 
         print('Loaded %i pretrained embeddings.' % len(all_word_embeds))
 

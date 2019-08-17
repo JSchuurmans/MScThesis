@@ -87,10 +87,10 @@ def prepare_dataset(dataset, word_to_id, tag_to_id):
     def f(x): return x.lower()
     data = []
     for s in dataset:
-        str_words = [w for w in s[0].split()]
+        str_words = [w for w in s[0].split()] # splitting of the sentence
         words = [word_to_id[f(w) if f(w) in word_to_id else '<UNK>']
                  for w in str_words]
-        tag = tag_to_id[s[1]]
+        tag = tag_to_id[s[1]] # if s[1] gives KeyValue error, check generation of tag_to_id
         data.append({
             'str_words': str_words,
             'words': words,

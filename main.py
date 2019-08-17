@@ -42,9 +42,11 @@ parser.add_argument('--vary_obs', action='store',  dest='vary_obs', default=0,
 parser.add_argument('--word_vector', action='store',  dest='word_vector', default='ft', 
                     type=str, help="Type of wordvectors")
 parser.add_argument('--cbow', action='store',  dest='cbow', default='sum', 
-                    type=str, help="Type of wordvectors")
+                    type=str, help="sum or ave")
 parser.add_argument('--hier', action='store',  dest='hier', default=0, 
                     type=int, help="User Hierarchical Model")
+parser.add_argument('--ngram', action='store',  dest='ngram', default=1, 
+                    type=int, help="Max nr of ngrams used for NB")
 
 
 opt = parser.parse_args()
@@ -55,8 +57,13 @@ use_dataset = parameters['dataset']
 # model_name = parameters['model']
 if parameters['model'] == 'SVM':
     model_name = f"{parameters['model']}_{parameters['word_vector']}_{parameters['cbow']}"
+elif parameters['model'] in ['LSTM','BiLSTM','LSTM_BB','BiLSTM_BB']:
+    model_name = f"{parameters['model']}_{parameters['word_vector']}"
+elif parameters['model'] == 'NB':
+    model_name = f"{parameters['model']}_{parameters['ngram']}"
 else:
     model_name = parameters['model']
+
 if parameters['hier']:
     model_name = f'h_{model_name}'
 parameters['model_name'] = model_name
@@ -71,13 +78,16 @@ WORD_PATHS = {50:"wordvectors/glove.6B.50d.txt",
 INTENT_RUNS = 10
 OBS_RUNS = 10
 
+if parameters['dataset'] in ['braun','travel','ubuntu','webapp','webapp2']:
+    parameters['kfold'] = 2
+elif parameters['dataset'] == 'retail':
+    parameters['kfold'] = 5
 if parameters['crossval']:
-    if parameters['dataset'] in ['braun','travel','ubuntu','webapp','webapp2']:
-        parameters['kfold'] = 2
-    elif parameters['dataset'] == 'retail':
-        parameters['kfold'] = 5
     parameters['wordpaths'] = WORD_PATHS
-    parameters['worddims'] = WORD_PATHS.keys()
+    if parameters['word_vector'] in ['gl']:
+        parameters['worddims'] = WORD_PATHS.keys()
+    elif parameters['word_vector'] in ['ft','wv']:
+        parameters['worddims'] = [300]
     parameters['hdims'] = [25,50,75,100,150,200,300]
     parameters['cv_result_path'] = os.path.join(opt.log_path, use_dataset,'cv', model_name, str(parameters['time']))
     if not os.path.exists(parameters['cv_result_path']):
@@ -340,12 +350,12 @@ else:
 
 if parameters['crossval']:
     cross_val = Experiment(parameters)
-    cross_val.save_param(parameters['cv_result_path'])
-    # parameters = 
     best_w, best_h = cross_val.cv()
+    # parameters = 
     parameters['worddim'] = best_w
     parameters['wordpath'] = WORD_PATHS[best_w]
     parameters['hdim'] = best_h
+    # cross_val.save_param(parameters['cv_result_path'])
     # cross_val.create_meta()
 
 # parse parameters again,
@@ -355,19 +365,19 @@ if parameters['full']:
     print('beginning full experiment')
     full_data = Experiment(parameters)
     full_data.run()
-    full_data.save_param()
-    full_data.create_meta()
+    # full_data.save_param()
+    # full_data.create_meta()
 
 if parameters['intent']:
     intent = Experiment(parameters)
     intent.intent()
-    intent.save_param(parameters['int_result_path'])
+    # intent.save_param(parameters['int_result_path'])
 
 if parameters['vary_obs']:
     if parameters['dataset'] == 'retail':
         vary_obs = Experiment(parameters)
         vary_obs.vary_obs()
-        vary_obs.save_param(parameters['obs_result_path'])
+        # vary_obs.save_param(parameters['obs_result_path'])
     else:
         raise NotImplementedError
     

@@ -18,6 +18,7 @@ from models.neural_cls.models import BiLSTM_BB
 from models.neural_cls.models import h_BiLSTM
 
 from datasets.retail.retail_data_hierarchy import retail_data_hierarchy
+# from datasets.retail.retail_data_hierarchy2 import retail_data_hierarchy
 from datasets.braun.braun_data_hierarchy import braun_data_hierarchy
 
 # naive bayes module
@@ -73,9 +74,10 @@ class HModel(object):
         df_test = pd.read_pickle(ori_test_path)
 
         if self.parameters['dataset'] == 'braun':
-            self.n_nodes, h_path = braun_data_hierarchy(dataset_path, train_fn, test_fn)
+            # TODO adjust braun_data_hierarchy
+            self.n_nodes, h_path, tags, self.n_subclasses = braun_data_hierarchy(dataset_path, train_fn, test_fn)
         elif self.parameters['dataset'] == 'retail':
-            self.n_nodes, h_path = retail_data_hierarchy(dataset_path, train_fn, test_fn)
+            self.n_nodes, h_path, tags, self.n_subclasses = retail_data_hierarchy(dataset_path, train_fn, test_fn)
         
         dataset_path = h_path
         
@@ -90,12 +92,14 @@ class HModel(object):
                                                             worddim,
                                                             train_fn,
                                                             test_fn,
-                                                            label)
+                                                            label,
+                                                            tags,
+                                                            self.word_vectors)
 
             self.word_to_id = mappings['word_to_id']
             self.tag_to_id = mappings['tag_to_id']
-            print(len(self.tag_to_id))
-            print(self.tag_to_id)
+            # print('Used tag_to_id has length: ' + str(len(self.tag_to_id)))
+            # print(self.tag_to_id)
             self.word_embed = mappings['word_embeds']
         
         elif self.parameters['model'] in ['NB','SVM']:
@@ -207,8 +211,8 @@ class HModel(object):
                             hdim, output_size, 
                             pretrained = self.word_embed,
                             bidirectional = bidirectional,
-                            tag_to_id = self.tag_to_id,
-                            dataset = self.parameters['dataset']) #TODO hierarchy
+                            # tag_to_id = self.tag_to_id,
+                            n_subclasses = self.n_subclasses) #TODO hierarchy
                 # Build Bayesian NN
                 elif self.parameters['model'][-2:] == 'BB':
                     print (f"(Bi: {self.parameters['bidir']}) LSTM_BB")
@@ -224,7 +228,8 @@ class HModel(object):
             self.model = Pipeline([
                             ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
                                    stop_words=stopwords.words('english')+ list(string.punctuation),
-                                   min_df=3)),
+                                   min_df=3,
+                                   ngram_range=(1,self.parameters['ngram']))),
                             ('classifier', MultinomialNB(alpha=1)),])
         
         elif self.parameters['model'] == 'SVM':
@@ -245,7 +250,8 @@ class HModel(object):
                     self.models[i] = Pipeline([
                                 ('vectorizer', TfidfVectorizer(tokenizer=stemming_tokenizer,
                                     stop_words=stopwords.words('english')+ list(string.punctuation),
-                                    min_df=3)),
+                                    min_df=3,
+                                   ngram_range=(1,self.parameters['ngram']))),
                                 ('classifier', MultinomialNB(alpha=1)),])
                     # print(self.models[i])
                 elif self.parameters['model'] == 'SVM':
